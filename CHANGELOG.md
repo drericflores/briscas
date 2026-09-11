@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.5 — 2026-09-11
+
+- Replaced unsupported Unicode playing-card-back characters with the packaged
+  Spanish card-back image.
+- Dynamically hide computer card backs as the computer's hand is depleted.
+
 ## 2.1.4 — 2026-09-11
 
 - Changed About, game-result, statistics, and settings dialogs to a readable

@@ -121,9 +121,22 @@ class BriscasWindow(QMainWindow):
         self.info.setStyleSheet("font-size: 18px; font-weight: bold; padding: 8px")
         layout.addWidget(self.info)
         cpu_row = QHBoxLayout()
-        self.cpu_cards = QLabel()
-        self.cpu_cards.setAlignment(Qt.AlignCenter)
-        cpu_row.addWidget(self.cpu_cards)
+        cpu_row.addStretch()
+        self.cpu_title = QLabel("Computer:")
+        self.cpu_title.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
+        cpu_row.addWidget(self.cpu_title)
+        self.cpu_card_labels: list[QLabel] = []
+        card_back = QPixmap(str(data_root() / "cards" / "posterior.png")).scaled(
+            54, 82, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+        for _ in range(3):
+            label = QLabel()
+            label.setAlignment(Qt.AlignCenter)
+            label.setFixedSize(60, 88)
+            label.setPixmap(card_back)
+            cpu_row.addWidget(label)
+            self.cpu_card_labels.append(label)
+        cpu_row.addStretch()
         layout.addLayout(cpu_row)
         table = QHBoxLayout()
         self.lead_card = QLabel("Lead")
@@ -205,7 +218,8 @@ class BriscasWindow(QMainWindow):
             f"Trump: {self.trump.title()}   You: {self.player_score}   "
             f"CPU: {self.cpu_score}   Cards left: {len(self.deck)}"
         )
-        self.cpu_cards.setText("Computer: " + "  ".join("🂠" for _ in self.cpu_hand))
+        for index, label in enumerate(self.cpu_card_labels):
+            label.setVisible(index < len(self.cpu_hand))
         self.render_trump_card()
         self.render_table()
         for button in self.card_buttons:

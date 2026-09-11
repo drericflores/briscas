@@ -5,9 +5,9 @@ game. It provides a PyQt5 interface, three computer difficulty levels, sound,
 and persistent game statistics.
 
 This repository reconstructs the maintainable source project from the surviving
-Briscas 2.1.0 Debian binary package. Version 2.1.4 completes Linux desktop
+Briscas 2.1.0 Debian binary package. Version 2.1.5 completes Linux desktop
 integration, Debian package layout, table-card rendering, the face-up trump-card
-display, and final high-contrast game-table styling.
+display, final high-contrast game-table styling, and portable computer card backs.
 
 ## Build and test
 
@@ -19,7 +19,7 @@ sh scripts/build-deb.sh
 ## Install
 
 ```sh
-sudo apt install ./dist/briscas_2.1.4_all.deb
+sudo apt install ./dist/briscas_2.1.5_all.deb
 ```
 
 After installation, launch **Briscas** from the application menu or run
