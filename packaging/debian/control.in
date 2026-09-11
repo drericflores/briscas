@@ -1,0 +1,13 @@
+Package: briscas
+Version: @VERSION@
+Architecture: all
+Maintainer: Dr. Eric Oliver Flores Toro <eoftoro@gmail.com>
+Installed-Size: @INSTALLED_SIZE@
+Depends: python3 (>= 3.10), python3-pyqt5, python3-pyqt5.qtmultimedia
+Section: games
+Priority: optional
+Homepage: https://github.com/drericflores/briscas
+Description: Classic Briscas card game against a computer opponent
+ Briscas provides a desktop implementation of the traditional Spanish
+ trick-taking card game, with three computer difficulty levels, sound,
+ persistent statistics, and a graphical PyQt5 interface.
