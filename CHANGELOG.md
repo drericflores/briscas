@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.2 — 2026-09-11
+
+- Added the new Lily-playing-Briscas PNG application icon.
+- Made lead and reply cards render directly from game state.
+- Kept the completed trick visible until the next lead begins.
+
 ## 2.1.1 — 2026-09-11
 
 - Reconstructed maintainable source from the surviving 2.1.0 binary package.

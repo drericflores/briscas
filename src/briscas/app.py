@@ -83,7 +83,8 @@ class BriscasWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"Briscas {__version__}")
         self.setMinimumSize(980, 680)
-        self.setWindowIcon(QIcon(str(data_root() / "cards" / "posterior.png")))
+        icon = Path("/usr/share/icons/hicolor/1024x1024/apps/com.ericflores.briscas.png")
+        self.setWindowIcon(QIcon(str(icon if icon.exists() else data_root() / "cards" / "posterior.png")))
         self.difficulty = "normal"
         self.sounds = SoundBank()
         self.stats = self.load_stats()
@@ -93,6 +94,7 @@ class BriscasWindow(QMainWindow):
         self.trump = "oro"
         self.leader = "player"
         self.table: list[tuple[str, Card]] = []
+        self.last_trick: list[tuple[str, Card]] = []
         self.player_score = self.cpu_score = 0
         self.locked = False
         self.card_buttons: list[QPushButton] = []
@@ -156,6 +158,7 @@ class BriscasWindow(QMainWindow):
         self.trump = self.deck[0].suit
         self.leader = "player"
         self.table = []
+        self.last_trick = []
         self.player_score = self.cpu_score = 0
         self.locked = False
         self.sounds.play("shuffle")
@@ -167,6 +170,7 @@ class BriscasWindow(QMainWindow):
             f"CPU: {self.cpu_score}   Cards left: {len(self.deck)}"
         )
         self.cpu_cards.setText("Computer: " + "  ".join("🂠" for _ in self.cpu_hand))
+        self.render_table()
         for button in self.card_buttons:
             self.hand_row.removeWidget(button)
             button.deleteLater()
@@ -180,6 +184,16 @@ class BriscasWindow(QMainWindow):
             button.clicked.connect(lambda checked=False, i=index: self.player_play(i))
             self.hand_row.addWidget(button)
             self.card_buttons.append(button)
+
+    def render_table(self) -> None:
+        """Render table cards from state so a hand refresh cannot erase them."""
+        visible = self.table or self.last_trick
+        for index, label in enumerate((self.lead_card, self.reply_card)):
+            label.setPixmap(QPixmap())
+            if index < len(visible):
+                self.show_table_card(label, visible[index][1])
+            else:
+                label.setText("Lead" if index == 0 else "Reply")
 
     def show_table_card(self, label: QLabel, card: Card) -> None:
         label.setText("")
@@ -198,6 +212,7 @@ class BriscasWindow(QMainWindow):
             QTimer.singleShot(700, self.finish_trick)
             return
         self.table = [("player", card)]
+        self.last_trick = []
         self.show_table_card(self.lead_card, card)
         self.sounds.play("play")
         self.render()
@@ -236,11 +251,8 @@ class BriscasWindow(QMainWindow):
                 self.cpu_hand.append(first)
                 if second:
                     self.player_hand.append(second)
+        self.last_trick = list(self.table)
         self.table = []
-        self.lead_card.setPixmap(QPixmap())
-        self.reply_card.setPixmap(QPixmap())
-        self.lead_card.setText("Lead")
-        self.reply_card.setText("Reply")
         self.locked = False
         if not self.player_hand and not self.cpu_hand:
             self.end_game()
@@ -254,6 +266,7 @@ class BriscasWindow(QMainWindow):
         self.locked = True
         card = self.cpu_hand.pop(ai_choose(self.cpu_hand, None, self.trump, self.difficulty))
         self.table = [("computer", card)]
+        self.last_trick = []
         self.show_table_card(self.lead_card, card)
         self.locked = False
         self.render()

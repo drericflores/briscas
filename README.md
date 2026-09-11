@@ -5,8 +5,8 @@ game. It provides a PyQt5 interface, three computer difficulty levels, sound,
 and persistent game statistics.
 
 This repository reconstructs the maintainable source project from the surviving
-Briscas 2.1.0 Debian binary package. Version 2.1.1 repairs Linux desktop
-integration and Debian package layout.
+Briscas 2.1.0 Debian binary package. Version 2.1.2 repairs Linux desktop
+integration, Debian package layout, and table-card rendering.
 
 ## Build and test
 
@@ -18,7 +18,7 @@ sh scripts/build-deb.sh
 ## Install
 
 ```sh
-sudo apt install ./dist/briscas_2.1.1_all.deb
+sudo apt install ./dist/briscas_2.1.2_all.deb
 ```
 
 After installation, launch **Briscas** from the application menu or run
