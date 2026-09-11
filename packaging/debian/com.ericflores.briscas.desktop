@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Briscas
+Comment=Play the classic Briscas card game
+Exec=briscas
+Icon=com.ericflores.briscas
+Terminal=false
+Categories=Game;CardGame;
+Keywords=Briscas;Brisca;Cards;Spanish;
+StartupNotify=true
