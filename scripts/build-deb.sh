@@ -18,6 +18,8 @@ install -m 0644 "$project_dir/packaging/debian/com.ericflores.briscas.desktop" "
 install -m 0644 "$project_dir/assets/icons/briscas-lily.png" \
   "$build_dir/usr/share/icons/hicolor/1024x1024/apps/com.ericflores.briscas.png"
 install -m 0644 "$project_dir/README.md" "$build_dir/usr/share/doc/briscas/README"
+install -m 0644 "$project_dir/LICENSE" "$build_dir/usr/share/doc/briscas/LICENSE"
+install -m 0644 "$project_dir/packaging/debian/copyright" "$build_dir/usr/share/doc/briscas/copyright"
 installed_size=$(du -sk "$build_dir/usr" | cut -f1)
 sed -e "s/@VERSION@/$version/g" -e "s/@INSTALLED_SIZE@/$installed_size/g" \
   "$project_dir/packaging/debian/control.in" > "$build_dir/DEBIAN/control"

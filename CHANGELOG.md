@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.4 — 2026-09-11
+
+- Changed About, game-result, statistics, and settings dialogs to a readable
+  dark-blue scheme with white text.
+- Added gold-bordered dark-blue dialog buttons with clear interaction states.
+- Added a substantial gold frame around the green game table.
+- Licensed the reconstructed software under MIT and documented the traditional
+  game rules as public domain.
+- Declared the reconstructed game feature-complete after final visual polish.
+
 ## 2.1.3 — 2026-09-11
 
 - Display the initial face-up card that establishes the trump suit.

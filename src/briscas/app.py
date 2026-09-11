@@ -113,7 +113,9 @@ class BriscasWindow(QMainWindow):
         help_menu.addAction(QAction("&About", self, triggered=self.show_about))
 
         root = QWidget()
+        root.setObjectName("gameTableFrame")
         layout = QVBoxLayout(root)
+        layout.setContentsMargins(18, 18, 18, 18)
         self.info = QLabel()
         self.info.setAlignment(Qt.AlignCenter)
         self.info.setStyleSheet("font-size: 18px; font-weight: bold; padding: 8px")
@@ -140,7 +142,35 @@ class BriscasWindow(QMainWindow):
         layout.addLayout(self.hand_row)
         self.setCentralWidget(root)
         self.setStatusBar(QStatusBar())
-        self.setStyleSheet("QMainWindow { background: #0d3b21; } QLabel { color: #f7e7bd; }")
+        self.setStyleSheet("""
+            QMainWindow { background: #071f13; }
+            QWidget#gameTableFrame {
+                background: #0d3b21;
+                border: 7px solid #d4af37;
+                border-radius: 12px;
+            }
+            QWidget#gameTableFrame QLabel { color: #f7e7bd; }
+            QMessageBox, QDialog { background-color: #0b2545; }
+            QMessageBox QLabel, QDialog QLabel {
+                color: #ffffff;
+                background: transparent;
+                font-size: 14px;
+            }
+            QMessageBox QPushButton, QDialog QPushButton {
+                color: #ffffff;
+                background-color: #173f6b;
+                border: 2px solid #d4af37;
+                border-radius: 5px;
+                padding: 6px 18px;
+                min-width: 72px;
+            }
+            QMessageBox QPushButton:hover, QDialog QPushButton:hover {
+                background-color: #24588d;
+            }
+            QMessageBox QPushButton:pressed, QDialog QPushButton:pressed {
+                background-color: #071b33;
+            }
+        """)
 
     def card_pixmap(self, card: Card, width: int = 150, height: int = 240) -> QPixmap:
         path = data_root() / "cards" / f"{card.rank}_{card.suit}.png"
@@ -321,7 +351,8 @@ class BriscasWindow(QMainWindow):
         QMessageBox.about(
             self, "About Briscas",
             f"<h2>Briscas {__version__}</h2><p>A classic Spanish-card game against the computer.</p>"
-            "<p>Copyright © 2025–2026 Dr. Eric Oliver Flores Toro.</p>",
+            "<p>The traditional Briscas game rules are public domain.<br>"
+            "This software is distributed under the MIT License.</p>",
         )
 
 
