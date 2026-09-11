@@ -3,7 +3,7 @@ Upstream-Name: Briscas
 Source: https://github.com/drericflores/briscas
 
 Files: src/* tests/* scripts/* packaging/*
-Copyright: 2026 Briscas contributors
+Copyright: 2026 Dr. Eric O. Flores
 License: MIT
 
 Files: assets/cards/* assets/sounds/*
