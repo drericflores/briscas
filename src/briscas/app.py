@@ -92,6 +92,7 @@ class BriscasWindow(QMainWindow):
         self.player_hand: list[Card] = []
         self.cpu_hand: list[Card] = []
         self.trump = "oro"
+        self.trump_card: Card | None = None
         self.leader = "player"
         self.table: list[tuple[str, Card]] = []
         self.last_trick: list[tuple[str, Card]] = []
@@ -124,12 +125,16 @@ class BriscasWindow(QMainWindow):
         layout.addLayout(cpu_row)
         table = QHBoxLayout()
         self.lead_card = QLabel("Lead")
+        self.trump_card_label = QLabel("Trump Card")
         self.reply_card = QLabel("Reply")
-        for label in (self.lead_card, self.reply_card):
+        for label in (self.lead_card, self.trump_card_label, self.reply_card):
             label.setAlignment(Qt.AlignCenter)
             label.setFixedSize(180, 270)
             label.setStyleSheet("border: 2px solid #a58850; background: #174f2a; color: white")
             table.addWidget(label)
+        self.trump_card_label.setStyleSheet(
+            "border: 3px solid #e2b84c; background: #174f2a; color: #f7e7bd; font-weight: bold"
+        )
         layout.addLayout(table)
         self.hand_row = QHBoxLayout()
         layout.addLayout(self.hand_row)
@@ -155,7 +160,8 @@ class BriscasWindow(QMainWindow):
         self.deck = make_deck()
         self.player_hand = [self.deck.pop() for _ in range(3)]
         self.cpu_hand = [self.deck.pop() for _ in range(3)]
-        self.trump = self.deck[0].suit
+        self.trump_card = self.deck[0]
+        self.trump = self.trump_card.suit
         self.leader = "player"
         self.table = []
         self.last_trick = []
@@ -170,6 +176,7 @@ class BriscasWindow(QMainWindow):
             f"CPU: {self.cpu_score}   Cards left: {len(self.deck)}"
         )
         self.cpu_cards.setText("Computer: " + "  ".join("🂠" for _ in self.cpu_hand))
+        self.render_trump_card()
         self.render_table()
         for button in self.card_buttons:
             self.hand_row.removeWidget(button)
@@ -184,6 +191,18 @@ class BriscasWindow(QMainWindow):
             button.clicked.connect(lambda checked=False, i=index: self.player_play(i))
             self.hand_row.addWidget(button)
             self.card_buttons.append(button)
+
+    def render_trump_card(self) -> None:
+        """Keep the face-up card that established trump visible while it remains in the stock."""
+        self.trump_card_label.setPixmap(QPixmap())
+        if self.deck and self.trump_card is not None and self.trump_card in self.deck:
+            self.show_table_card(self.trump_card_label, self.trump_card)
+            self.trump_card_label.setToolTip(
+                f"Trump card: {self.trump_card.rank} of {self.trump_card.suit.title()}"
+            )
+        else:
+            self.trump_card_label.setText(f"Trump\n{self.trump.title()}")
+            self.trump_card_label.setToolTip("The face-up trump card has been drawn")
 
     def render_table(self) -> None:
         """Render table cards from state so a hand refresh cannot erase them."""

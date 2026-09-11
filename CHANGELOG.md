@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.3 — 2026-09-11
+
+- Display the initial face-up card that establishes the trump suit.
+- Keep the trump card visible in its own gold-bordered table position.
+- Replace the card with a persistent trump-suit indicator after it is drawn.
+
 ## 2.1.2 — 2026-09-11
 
 - Added the new Lily-playing-Briscas PNG application icon.
