@@ -19,7 +19,7 @@ sh scripts/build-deb.sh
 ## Install
 
 ```sh
-sudo apt install ./dist/briscas_2.2.0_all.deb
+sudo apt install ./dist/briscas_2.2.1_all.deb
 ```
 
 After installation, launch **Briscas** from the application menu or run
@@ -35,3 +35,8 @@ The provenance and license of the bundled Spanish-card images and sound files
 were not recorded in the surviving package. They are included for recovery and
 historical continuity, but no third-party rights are claimed. Their licensing
 must be verified or the assets replaced before third-party redistribution.
+
+## Support
+
+If you enjoy Briscas and would like to support its development, donations are
+welcome via Zelle to eoftoro@gmail.com.

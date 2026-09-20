@@ -33,6 +33,13 @@ def data_root() -> Path:
     return Path(__file__).resolve().parents[2] / "assets"
 
 
+def app_icon_path() -> Path:
+    installed = Path("/usr/share/icons/hicolor/1024x1024/apps/com.ericflores.briscas.png")
+    if installed.exists():
+        return installed
+    return data_root() / "icons" / "briscas-lily.png"
+
+
 def state_file() -> Path:
     root = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "briscas"
     root.mkdir(parents=True, exist_ok=True)
@@ -119,8 +126,7 @@ class BriscasWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"Briscas {__version__}")
-        icon = Path("/usr/share/icons/hicolor/1024x1024/apps/com.ericflores.briscas.png")
-        self.setWindowIcon(QIcon(str(icon if icon.exists() else data_root() / "cards" / "posterior.png")))
+        self.setWindowIcon(QIcon(str(app_icon_path())))
         self.difficulty = "medium"
         self.num_players = 2
         self.sounds = SoundBank()
@@ -306,6 +312,7 @@ class BriscasWindow(QMainWindow):
         self.last_trick: list[tuple[int, Card]] = []
         self.turn_order: list[int] = []
         self.locked = False
+        self._game_over_pending = False
         self.sounds.play("shuffle")
         self.start_trick()
 
@@ -379,6 +386,7 @@ class BriscasWindow(QMainWindow):
         if seat == 0:
             self.locked = False
             self.render()
+            self.statusBar().showMessage("Your turn — play a card.", 2500)
         else:
             self.locked = True
             self.render()
@@ -416,11 +424,9 @@ class BriscasWindow(QMainWindow):
         self.leader = winner_seat
         self.sounds.play("trick")
         if winner_seat == 0:
-            self.statusBar().showMessage(f"You win the trick! +{points} points", 3000)
+            announcement = f"You win the trick! +{points} points"
         else:
-            self.statusBar().showMessage(
-                f"{self.seat_label(winner_seat)} wins the trick. +{points} points.", 3000
-            )
+            announcement = f"{self.seat_label(winner_seat)} wins the trick. +{points} points."
         if self.deck:
             draw_order = [(winner_seat + i) % self.num_players for i in range(self.num_players)]
             for seat in draw_order:
@@ -429,14 +435,24 @@ class BriscasWindow(QMainWindow):
                 self.hands[seat].append(self.deck.pop())
         self.last_trick = list(self.table)
         self.table = []
-        # Keep input locked through the gap until start_trick()/advance_turn() decides
+        self._game_over_pending = all(not hand for hand in self.hands)
+        # Keep input locked through the pause until start_trick()/advance_turn() decides
         # whose turn it actually is; otherwise a stale awaiting_seat could let the
         # player's hand buttons appear clickable before the next trick has begun.
         self.render()
-        if all(not hand for hand in self.hands):
+        # Show the result prominently (over the usual score line) and hold the finished
+        # trick on the table for a couple of seconds before clearing it, so there's a
+        # clear beat between "here's what just happened" and "the table is clear, go".
+        self.info.setText(announcement)
+        self.statusBar().showMessage(announcement, 2600)
+        QTimer.singleShot(2000, self._after_trick_pause)
+
+    def _after_trick_pause(self) -> None:
+        self.last_trick = []
+        if self._game_over_pending:
             self.end_game()
         else:
-            QTimer.singleShot(650, self.start_trick)
+            self.start_trick()
 
     def end_game(self) -> None:
         self.stats["games"] += 1
@@ -476,12 +492,19 @@ class BriscasWindow(QMainWindow):
         QMessageBox.information(self, "Statistics", "\n".join(f"{k.title()}: {v}" for k, v in self.stats.items()))
 
     def show_about(self) -> None:
-        QMessageBox.about(
-            self, "About Briscas",
+        box = QMessageBox(self)
+        box.setWindowTitle("About Briscas")
+        box.setTextFormat(Qt.RichText)
+        box.setText(
             f"<h2>Briscas {__version__}</h2><p>A classic Spanish-card game against the computer.</p>"
             "<p>The traditional Briscas game rules are public domain.<br>"
-            "This software is distributed under the MIT License.</p>",
+            "This software is distributed under the MIT License.</p>"
         )
+        icon_pixmap = QPixmap(str(app_icon_path())).scaled(
+            128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+        box.setIconPixmap(icon_pixmap)
+        box.exec_()
 
 
 def main() -> int:
