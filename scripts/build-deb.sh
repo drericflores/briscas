@@ -8,6 +8,7 @@ rm -rf "$build_dir"
 mkdir -p "$build_dir/DEBIAN" "$build_dir/usr/bin" \
   "$build_dir/usr/lib/python3/dist-packages" "$build_dir/usr/share/applications" \
   "$build_dir/usr/share/games/briscas/cards" "$build_dir/usr/share/games/briscas/sounds" \
+  "$build_dir/usr/share/games/briscas/icons" \
   "$build_dir/usr/share/pixmaps" "$build_dir/usr/share/doc/briscas" "$output_dir"
 mkdir -p "$build_dir/usr/lib/python3/dist-packages/briscas"
 cp "$project_dir/src/briscas/"*.py "$build_dir/usr/lib/python3/dist-packages/briscas/"
@@ -38,6 +39,9 @@ for size in (16, 22, 24, 32, 36, 48, 64, 72, 96, 128, 192, 256, 512):
 PYEOF
 # Long-standing fallback path some launchers still check directly by filename.
 install -m 0644 "$icon_src" "$build_dir/usr/share/pixmaps/com.ericflores.briscas.png"
+# Stable fallback under the game's own data directory, used by app_icon_source_path()
+# if no hicolor size can be found for any reason (e.g. a non-standard install layout).
+install -m 0644 "$icon_src" "$build_dir/usr/share/games/briscas/icons/briscas-lily.png"
 
 install -m 0644 "$project_dir/README.md" "$build_dir/usr/share/doc/briscas/README"
 install -m 0644 "$project_dir/LICENSE" "$build_dir/usr/share/doc/briscas/LICENSE"
