@@ -34,13 +34,26 @@ def winner_of_trick(lead: Card, reply: Card, trump: str) -> int:
     return 0
 
 
-def ai_choose(hand: list[Card], lead: Card | None, trump: str, difficulty: str) -> int:
+def winner_index(plays: list[Card], trump: str) -> int:
+    """Return the index within plays of the card that wins the trick, for any number of players."""
+    best = 0
+    for i in range(1, len(plays)):
+        if winner_of_trick(plays[best], plays[i], trump) == 1:
+            best = i
+    return best
+
+
+def ai_choose(hand: list[Card], trick: list[Card], trump: str, difficulty: str) -> int:
+    """Choose a card index to play. trick holds the cards already played this trick (empty if leading)."""
     if difficulty == "easy":
         return random.randrange(len(hand))
-    if lead is None:
+    if not trick:
         key = lambda c: (c.points + (5 if c.suit == trump else 0), STRENGTH[c.rank])
         return min(range(len(hand)), key=lambda i: key(hand[i]))
-    winners = [i for i, card in enumerate(hand) if winner_of_trick(lead, card, trump) == 1]
+    winners = [
+        i for i, card in enumerate(hand)
+        if winner_index(trick + [card], trump) == len(trick)
+    ]
     if winners:
         return min(winners, key=lambda i: (hand[i].points, STRENGTH[hand[i].rank]))
     if difficulty == "hard":

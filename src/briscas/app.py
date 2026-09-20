@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 )
 
 from . import __version__
-from .game import Card, ai_choose, make_deck, winner_of_trick
+from .game import Card, ai_choose, make_deck, winner_index
 
 
 def data_root() -> Path:
@@ -85,31 +85,66 @@ class SettingsDialog(QDialog):
         form.addRow(button)
 
 
+class PlayerCountDialog(QDialog):
+    """Lets the player choose 2, 3, or 4 total players before a new game deals."""
+
+    OPTIONS = (
+        (2, "2 players — You vs. 1 computer"),
+        (3, "3 players — You vs. 2 computers (free-for-all)"),
+        (4, "4 players — You + partner vs. 2 computers (teams)"),
+    )
+
+    def __init__(self, parent: "BriscasWindow", current: int) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("New Game")
+        layout = QFormLayout(self)
+        self.count = QComboBox()
+        for _, label in self.OPTIONS:
+            self.count.addItem(label)
+        current_index = next(
+            (i for i, (n, _) in enumerate(self.OPTIONS) if n == current), 0
+        )
+        self.count.setCurrentIndex(current_index)
+        layout.addRow("Players", self.count)
+        button = QPushButton("Start")
+        button.clicked.connect(self.accept)
+        layout.addRow(button)
+
+    @property
+    def selected_count(self) -> int:
+        return self.OPTIONS[self.count.currentIndex()][0]
+
+
 class BriscasWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"Briscas {__version__}")
-        self.setMinimumSize(980, 680)
         icon = Path("/usr/share/icons/hicolor/1024x1024/apps/com.ericflores.briscas.png")
         self.setWindowIcon(QIcon(str(icon if icon.exists() else data_root() / "cards" / "posterior.png")))
         self.difficulty = "medium"
+        self.num_players = 2
         self.sounds = SoundBank()
         self.stats = self.load_stats()
-        self.deck: list[Card] = []
-        self.player_hand: list[Card] = []
-        self.cpu_hand: list[Card] = []
-        self.trump = "oro"
-        self.trump_card: Card | None = None
-        self.leader = "player"
-        self.table: list[tuple[str, Card]] = []
-        self.last_trick: list[tuple[str, Card]] = []
-        self.player_score = self.cpu_score = 0
-        self.locked = False
-        self.card_buttons: list[QPushButton] = []
-        self.build_ui()
+        self.awaiting_seat = 0
         self.new_game()
 
+    def seat_label(self, seat: int) -> str:
+        if seat == 0:
+            return "You"
+        if self.num_players == 4:
+            return "Partner" if seat == 2 else f"Opponent {1 if seat == 1 else 2}"
+        return f"CPU {seat}"
+
+    def scoreboard(self) -> list[tuple[str, int]]:
+        if self.num_players == 4:
+            your_team = self.scores[0] + self.scores[2]
+            opponents = self.scores[1] + self.scores[3]
+            return [("Your Team", your_team), ("Opponents", opponents)]
+        return [(self.seat_label(seat), score) for seat, score in enumerate(self.scores)]
+
     def build_ui(self) -> None:
+        self.card_buttons: list[QPushButton] = []
+        self.menuBar().clear()
         game = self.menuBar().addMenu("&Game")
         new = QAction("&New Game", self, shortcut="Ctrl+N", triggered=self.new_game)
         settings = QAction("&Settings", self, shortcut="Ctrl+,", triggered=self.show_settings)
@@ -137,51 +172,68 @@ class BriscasWindow(QMainWindow):
         layout.setContentsMargins(18, 18, 18, 18)
         self.info = QLabel()
         self.info.setAlignment(Qt.AlignCenter)
-        self.info.setStyleSheet("font-size: 18px; font-weight: bold; padding: 8px")
+        self.info.setStyleSheet("font-size: 16px; font-weight: bold; padding: 8px")
         layout.addWidget(self.info)
-        cpu_row = QHBoxLayout()
-        cpu_row.addStretch()
-        self.cpu_title = QLabel("Computer:")
-        self.cpu_title.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
-        cpu_row.addWidget(self.cpu_title)
-        self.cpu_card_labels: list[QLabel] = []
+
+        opponents_row = QHBoxLayout()
+        opponents_row.addStretch()
+        self.opponent_card_labels: dict[int, list[QLabel]] = {}
         card_back = QPixmap(str(data_root() / "cards" / "posterior.png")).scaled(
-            54, 82, Qt.KeepAspectRatio, Qt.SmoothTransformation
+            50, 76, Qt.KeepAspectRatio, Qt.SmoothTransformation
         )
-        for _ in range(3):
-            label = QLabel()
-            label.setAlignment(Qt.AlignCenter)
-            label.setFixedSize(60, 88)
-            label.setPixmap(card_back)
-            cpu_row.addWidget(label)
-            self.cpu_card_labels.append(label)
-        cpu_row.addStretch()
-        layout.addLayout(cpu_row)
-        table = QHBoxLayout()
-        self.lead_caption = QLabel("Lead")
-        self.trump_caption = QLabel("Trump")
-        self.reply_caption = QLabel("Reply")
-        self.lead_card = QLabel("Lead")
-        self.trump_card_label = QLabel("Trump Card")
-        self.reply_card = QLabel("Reply")
-        for caption, label in (
-            (self.lead_caption, self.lead_card),
-            (self.trump_caption, self.trump_card_label),
-            (self.reply_caption, self.reply_card),
-        ):
+        for seat in range(1, self.num_players):
+            group = QVBoxLayout()
+            title = QLabel(f"{self.seat_label(seat)}:")
+            title.setAlignment(Qt.AlignCenter)
+            group.addWidget(title)
+            cards_row = QHBoxLayout()
+            labels: list[QLabel] = []
+            for _ in range(3):
+                label = QLabel()
+                label.setAlignment(Qt.AlignCenter)
+                label.setFixedSize(56, 82)
+                label.setPixmap(card_back)
+                cards_row.addWidget(label)
+                labels.append(label)
+            self.opponent_card_labels[seat] = labels
+            group.addLayout(cards_row)
+            opponents_row.addLayout(group)
+            opponents_row.addSpacing(24)
+        opponents_row.addStretch()
+        layout.addLayout(opponents_row)
+
+        table_row = QHBoxLayout()
+        self.seat_slots: dict[int, tuple[QLabel, QLabel]] = {}
+        slot_size = 180 if self.num_players <= 2 else 150
+        for seat in range(self.num_players):
+            caption = QLabel(self.seat_label(seat))
             caption.setAlignment(Qt.AlignCenter)
             caption.setStyleSheet("font-weight: bold; font-size: 13px; color: #f7e7bd;")
-            label.setAlignment(Qt.AlignCenter)
-            label.setFixedSize(180, 270)
-            label.setStyleSheet("border: 2px solid #a58850; background: #174f2a; color: white")
+            card_label = QLabel("Waiting")
+            card_label.setAlignment(Qt.AlignCenter)
+            card_label.setFixedSize(slot_size, int(slot_size * 1.5))
+            card_label.setStyleSheet("border: 2px solid #a58850; background: #174f2a; color: white")
             column = QVBoxLayout()
             column.addWidget(caption)
-            column.addWidget(label)
-            table.addLayout(column)
+            column.addWidget(card_label)
+            table_row.addLayout(column)
+            self.seat_slots[seat] = (caption, card_label)
+
+        self.trump_caption = QLabel("Trump")
+        self.trump_caption.setAlignment(Qt.AlignCenter)
+        self.trump_caption.setStyleSheet("font-weight: bold; font-size: 13px; color: #f7e7bd;")
+        self.trump_card_label = QLabel("Trump Card")
+        self.trump_card_label.setAlignment(Qt.AlignCenter)
+        self.trump_card_label.setFixedSize(slot_size, int(slot_size * 1.5))
         self.trump_card_label.setStyleSheet(
             "border: 3px solid #e2b84c; background: #174f2a; color: #f7e7bd; font-weight: bold"
         )
-        layout.addLayout(table)
+        trump_column = QVBoxLayout()
+        trump_column.addWidget(self.trump_caption)
+        trump_column.addWidget(self.trump_card_label)
+        table_row.addLayout(trump_column)
+
+        layout.addLayout(table_row)
         self.player_title = QLabel("You:")
         self.player_title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         layout.addWidget(self.player_title)
@@ -189,6 +241,7 @@ class BriscasWindow(QMainWindow):
         layout.addLayout(self.hand_row)
         self.setCentralWidget(root)
         self.setStatusBar(QStatusBar())
+        self.setMinimumSize(max(980, 230 * (self.num_players + 1)), 680)
         self.setStyleSheet("""
             QMainWindow { background: #071f13; }
             QWidget#gameTableFrame {
@@ -234,39 +287,50 @@ class BriscasWindow(QMainWindow):
         state_file().write_text(json.dumps(self.stats, indent=2) + "\n", encoding="utf-8")
 
     def new_game(self) -> None:
+        dialog = PlayerCountDialog(self, self.num_players)
+        if dialog.exec_() == QDialog.Accepted:
+            self.num_players = dialog.selected_count
+        elif hasattr(self, "hands"):
+            return  # cancelled restarting an existing game; leave it untouched
+
+        self.build_ui()
         self.deck = make_deck()
-        self.player_hand = [self.deck.pop() for _ in range(3)]
-        self.cpu_hand = [self.deck.pop() for _ in range(3)]
+        self.hands: list[list[Card]] = [
+            [self.deck.pop() for _ in range(3)] for _ in range(self.num_players)
+        ]
         self.trump_card = self.deck[0]
         self.trump = self.trump_card.suit
-        self.leader = "player"
-        self.table = []
-        self.last_trick = []
-        self.player_score = self.cpu_score = 0
+        self.leader = 0
+        self.scores = [0] * self.num_players
+        self.table: list[tuple[int, Card]] = []
+        self.last_trick: list[tuple[int, Card]] = []
+        self.turn_order: list[int] = []
         self.locked = False
         self.sounds.play("shuffle")
-        self.render()
+        self.start_trick()
 
     def render(self) -> None:
+        score_text = "   ".join(f"{label}: {score}" for label, score in self.scoreboard())
         self.info.setText(
-            f"Trump: {self.trump.title()}   You: {self.player_score}   "
-            f"CPU: {self.cpu_score}   Cards left: {len(self.deck)}   "
-            f"Difficulty: {self.difficulty.title()}"
+            f"Trump: {self.trump.title()}   {score_text}   "
+            f"Cards left: {len(self.deck)}   Difficulty: {self.difficulty.title()}"
         )
-        for index, label in enumerate(self.cpu_card_labels):
-            label.setVisible(index < len(self.cpu_hand))
+        for seat, labels in self.opponent_card_labels.items():
+            hand_len = len(self.hands[seat])
+            for index, label in enumerate(labels):
+                label.setVisible(index < hand_len)
         self.render_trump_card()
         self.render_table()
         for button in self.card_buttons:
             self.hand_row.removeWidget(button)
             button.deleteLater()
         self.card_buttons = []
-        for index, card in enumerate(self.player_hand):
+        for index, card in enumerate(self.hands[0]):
             button = QPushButton()
             button.setIcon(QIcon(self.card_pixmap(card)))
             button.setIconSize(self.card_pixmap(card).size())
             button.setFixedSize(165, 255)
-            button.setEnabled(not self.locked and self.leader == "player")
+            button.setEnabled(not self.locked and self.awaiting_seat == 0)
             button.clicked.connect(lambda checked=False, i=index: self.player_play(i))
             self.hand_row.addWidget(button)
             self.card_buttons.append(button)
@@ -284,118 +348,115 @@ class BriscasWindow(QMainWindow):
             self.trump_card_label.setToolTip("The face-up trump card has been drawn")
 
     def render_table(self) -> None:
-        """Render table cards from state so a hand refresh cannot erase them."""
+        """Render table cards by seat identity so it's always clear whose card is whose."""
         visible = self.table or self.last_trick
-        roles = ("Lead", "Reply")
-        labels = (self.lead_card, self.reply_card)
-        captions = (self.lead_caption, self.reply_caption)
-        for index, (label, caption, role) in enumerate(zip(labels, captions, roles)):
+        visible_map = dict(visible)
+        for seat, (caption, label) in self.seat_slots.items():
             label.setPixmap(QPixmap())
-            if index < len(visible):
-                owner, card = visible[index]
-                self.show_table_card(label, card)
-                owner_text = "Your" if owner == "player" else "Computer's"
-                caption.setText(f"{owner_text} {role}")
+            caption.setText(self.seat_label(seat))
+            if seat in visible_map:
+                self.show_table_card(label, visible_map[seat])
             else:
-                label.setText(role)
-                caption.setText(role)
+                label.setText("Waiting")
 
     def show_table_card(self, label: QLabel, card: Card) -> None:
         label.setText("")
         label.setPixmap(self.card_pixmap(card, 170, 260))
 
+    def start_trick(self) -> None:
+        # Player counts that don't evenly divide the 40-card deck (e.g. 3) can leave some
+        # seats a card short of others near the end; a seat with an empty hand sits out of
+        # remaining tricks entirely rather than being asked to play a card it doesn't have.
+        order = [(self.leader + i) % self.num_players for i in range(self.num_players)]
+        self.turn_order = [seat for seat in order if self.hands[seat]]
+        self.table = []
+        self.render()
+        self.advance_turn()
+
+    def advance_turn(self) -> None:
+        seat = self.turn_order[len(self.table)]
+        self.awaiting_seat = seat
+        if seat == 0:
+            self.locked = False
+            self.render()
+        else:
+            self.locked = True
+            self.render()
+            QTimer.singleShot(600, lambda: self.cpu_take_turn(seat))
+
+    def cpu_take_turn(self, seat: int) -> None:
+        hand = self.hands[seat]
+        trick_cards = [card for _, card in self.table]
+        card = hand.pop(ai_choose(hand, trick_cards, self.trump, self.difficulty))
+        self.table.append((seat, card))
+        self.render()
+        if len(self.table) == len(self.turn_order):
+            QTimer.singleShot(700, self.finish_trick)
+        else:
+            QTimer.singleShot(400, self.advance_turn)
+
     def player_play(self, index: int) -> None:
-        if self.locked or index >= len(self.player_hand):
+        if self.locked or self.awaiting_seat != 0 or index >= len(self.hands[0]):
             return
         self.locked = True
-        card = self.player_hand.pop(index)
-        if self.table and self.table[0][0] == "computer":
-            self.table.append(("player", card))
-            self.show_table_card(self.reply_card, card)
-            self.sounds.play("play")
-            self.render()
-            QTimer.singleShot(700, self.finish_trick)
-            return
-        self.table = [("player", card)]
-        self.last_trick = []
-        self.show_table_card(self.lead_card, card)
+        card = self.hands[0].pop(index)
+        self.table.append((0, card))
         self.sounds.play("play")
         self.render()
-        QTimer.singleShot(550, self.cpu_reply)
-
-    def cpu_reply(self) -> None:
-        lead = self.table[0][1]
-        card = self.cpu_hand.pop(ai_choose(self.cpu_hand, lead, self.trump, self.difficulty))
-        self.table.append(("computer", card))
-        self.show_table_card(self.reply_card, card)
-        QTimer.singleShot(700, self.finish_trick)
+        if len(self.table) == len(self.turn_order):
+            QTimer.singleShot(700, self.finish_trick)
+        else:
+            QTimer.singleShot(400, self.advance_turn)
 
     def finish_trick(self) -> None:
-        lead_owner, lead = self.table[0]
-        _, reply = self.table[1]
-        reply_wins = winner_of_trick(lead, reply, self.trump) == 1
-        if reply_wins:
-            winner = "computer" if lead_owner == "player" else "player"
-        else:
-            winner = lead_owner
-        points = lead.points + reply.points
-        if winner == "player":
-            self.player_score += points
-        else:
-            self.cpu_score += points
-        self.leader = winner
+        cards = [card for _, card in self.table]
+        winner_seat = self.table[winner_index(cards, self.trump)][0]
+        points = sum(card.points for card in cards)
+        self.scores[winner_seat] += points
+        self.leader = winner_seat
         self.sounds.play("trick")
-        if winner == "player":
+        if winner_seat == 0:
             self.statusBar().showMessage(f"You win the trick! +{points} points", 3000)
         else:
-            self.statusBar().showMessage(f"Computer wins the trick. +{points} points for the computer.", 3000)
+            self.statusBar().showMessage(
+                f"{self.seat_label(winner_seat)} wins the trick. +{points} points.", 3000
+            )
         if self.deck:
-            first = self.deck.pop()
-            second = self.deck.pop() if self.deck else None
-            if winner == "player":
-                self.player_hand.append(first)
-                if second:
-                    self.cpu_hand.append(second)
-            else:
-                self.cpu_hand.append(first)
-                if second:
-                    self.player_hand.append(second)
+            draw_order = [(winner_seat + i) % self.num_players for i in range(self.num_players)]
+            for seat in draw_order:
+                if not self.deck:
+                    break
+                self.hands[seat].append(self.deck.pop())
         self.last_trick = list(self.table)
         self.table = []
-        self.locked = False
-        if not self.player_hand and not self.cpu_hand:
-            self.end_game()
-        elif self.leader == "computer":
-            self.render()
-            QTimer.singleShot(650, self.cpu_lead)
-        else:
-            self.render()
-
-    def cpu_lead(self) -> None:
-        self.locked = True
-        card = self.cpu_hand.pop(ai_choose(self.cpu_hand, None, self.trump, self.difficulty))
-        self.table = [("computer", card)]
-        self.last_trick = []
-        self.show_table_card(self.lead_card, card)
-        self.locked = False
+        # Keep input locked through the gap until start_trick()/advance_turn() decides
+        # whose turn it actually is; otherwise a stale awaiting_seat could let the
+        # player's hand buttons appear clickable before the next trick has begun.
         self.render()
-        for button in self.card_buttons:
-            button.setEnabled(True)
+        if all(not hand for hand in self.hands):
+            self.end_game()
+        else:
+            QTimer.singleShot(650, self.start_trick)
 
     def end_game(self) -> None:
         self.stats["games"] += 1
-        if self.player_score > self.cpu_score:
+        standings = self.scoreboard()
+        best = max(score for _, score in standings)
+        leaders = [label for label, score in standings if score == best]
+        your_label = standings[0][0]
+        if your_label in leaders and len(leaders) == 1:
             result = "You win!"
             self.stats["wins"] += 1
-        elif self.player_score < self.cpu_score:
-            result = "Computer wins."
-            self.stats["losses"] += 1
-        else:
+        elif your_label in leaders:
             result = "Draw."
             self.stats["draws"] += 1
+        else:
+            result = f"{leaders[0]} wins."
+            self.stats["losses"] += 1
         self.save_stats()
         self.render()
-        QMessageBox.information(self, "Game Over", f"{result}\nFinal score: {self.player_score}–{self.cpu_score}")
+        breakdown = "\n".join(f"{label}: {score}" for label, score in standings)
+        QMessageBox.information(self, "Game Over", f"{result}\n\n{breakdown}")
 
     def set_difficulty(self, level: str) -> None:
         self.difficulty = level
