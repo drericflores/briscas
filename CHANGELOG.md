@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.6 — 2026-09-20
+
+- Fixed an incorrect path calculation in `data_root()` that pointed one
+  directory above the project root when running from a source checkout
+  instead of an installed `.deb`, leaving card, sound, and icon assets
+  unresolved on machines that hadn't installed the packaged build.
+- Made the `PyQt5.QtMultimedia` import optional: a machine missing the
+  separate `python3-pyqt5.qtmultimedia` package (present on one machine,
+  absent on another) no longer crashes on startup before any window is
+  shown; the game now launches with sound disabled instead.
+
 ## 2.1.5 — 2026-09-11
 
 - Replaced unsupported Unicode playing-card-back characters with the packaged
