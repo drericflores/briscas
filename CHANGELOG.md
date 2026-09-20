@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.3 — 2026-09-20
+
+- The game now starts immediately on launch (a 2-player game, dealt and
+  ready to play) instead of first blocking on the "how many players?"
+  dialog. That dialog now only appears when explicitly starting a new
+  game (Game > New Game / Ctrl+N); difficulty and player count both
+  remain changeable at any time from the Game menu without interrupting
+  play.
+
 ## 2.2.2 — 2026-09-20
 
 - Fixed the application icon not being reliably recognized by the desktop's

@@ -132,7 +132,7 @@ class BriscasWindow(QMainWindow):
         self.sounds = SoundBank()
         self.stats = self.load_stats()
         self.awaiting_seat = 0
-        self.new_game()
+        self._deal_new_game()  # start playing immediately; no dialog on launch
 
     def seat_label(self, seat: int) -> str:
         if seat == 0:
@@ -294,11 +294,12 @@ class BriscasWindow(QMainWindow):
 
     def new_game(self) -> None:
         dialog = PlayerCountDialog(self, self.num_players)
-        if dialog.exec_() == QDialog.Accepted:
-            self.num_players = dialog.selected_count
-        elif hasattr(self, "hands"):
-            return  # cancelled restarting an existing game; leave it untouched
+        if dialog.exec_() != QDialog.Accepted:
+            return  # cancelled; leave the current game untouched
+        self.num_players = dialog.selected_count
+        self._deal_new_game()
 
+    def _deal_new_game(self) -> None:
         self.build_ui()
         self.deck = make_deck()
         self.hands: list[list[Card]] = [
