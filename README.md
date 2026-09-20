@@ -1,8 +1,5 @@
 # Briscas
 
-# This is a Human against Computer Game
-
-
 Briscas is a desktop implementation of the classic Spanish trick-taking card
 game. It provides a PyQt5 interface, three computer difficulty levels, sound,
 and persistent game statistics.
