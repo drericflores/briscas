@@ -14,9 +14,9 @@ except ImportError:
     QSoundEffect = None
 
 from PyQt5.QtWidgets import (
-    QAction, QApplication, QCheckBox, QComboBox, QDialog, QFormLayout,
-    QHBoxLayout, QLabel, QMainWindow, QMessageBox, QPushButton, QSlider,
-    QStatusBar, QVBoxLayout, QWidget,
+    QAction, QActionGroup, QApplication, QCheckBox, QComboBox, QDialog,
+    QFormLayout, QHBoxLayout, QLabel, QMainWindow, QMessageBox, QPushButton,
+    QSlider, QStatusBar, QVBoxLayout, QWidget,
 )
 
 from . import __version__
@@ -70,7 +70,7 @@ class SettingsDialog(QDialog):
         self.setWindowTitle("Settings")
         form = QFormLayout(self)
         self.difficulty = QComboBox()
-        self.difficulty.addItems(["easy", "normal", "hard"])
+        self.difficulty.addItems(["easy", "medium", "hard"])
         self.difficulty.setCurrentText(parent.difficulty)
         self.sound = QCheckBox("Enable sound")
         self.sound.setChecked(parent.sounds.enabled)
@@ -92,7 +92,7 @@ class BriscasWindow(QMainWindow):
         self.setMinimumSize(980, 680)
         icon = Path("/usr/share/icons/hicolor/1024x1024/apps/com.ericflores.briscas.png")
         self.setWindowIcon(QIcon(str(icon if icon.exists() else data_root() / "cards" / "posterior.png")))
-        self.difficulty = "normal"
+        self.difficulty = "medium"
         self.sounds = SoundBank()
         self.stats = self.load_stats()
         self.deck: list[Card] = []
@@ -115,7 +115,19 @@ class BriscasWindow(QMainWindow):
         settings = QAction("&Settings", self, shortcut="Ctrl+,", triggered=self.show_settings)
         stats = QAction("S&tatistics", self, triggered=self.show_stats)
         quit_action = QAction("&Quit", self, shortcut="Ctrl+Q", triggered=self.close)
-        game.addActions([new, settings, stats, quit_action])
+        game.addActions([new, settings, stats])
+        difficulty_menu = game.addMenu("&Difficulty")
+        self.difficulty_actions: dict[str, QAction] = {}
+        difficulty_group = QActionGroup(self)
+        difficulty_group.setExclusive(True)
+        for level in ("easy", "medium", "hard"):
+            action = QAction(level.title(), self, checkable=True)
+            action.triggered.connect(lambda checked=False, lvl=level: self.set_difficulty(lvl))
+            difficulty_group.addAction(action)
+            difficulty_menu.addAction(action)
+            self.difficulty_actions[level] = action
+        self.difficulty_actions[self.difficulty].setChecked(True)
+        game.addAction(quit_action)
         help_menu = self.menuBar().addMenu("&Help")
         help_menu.addAction(QAction("&About", self, triggered=self.show_about))
 
@@ -146,18 +158,33 @@ class BriscasWindow(QMainWindow):
         cpu_row.addStretch()
         layout.addLayout(cpu_row)
         table = QHBoxLayout()
+        self.lead_caption = QLabel("Lead")
+        self.trump_caption = QLabel("Trump")
+        self.reply_caption = QLabel("Reply")
         self.lead_card = QLabel("Lead")
         self.trump_card_label = QLabel("Trump Card")
         self.reply_card = QLabel("Reply")
-        for label in (self.lead_card, self.trump_card_label, self.reply_card):
+        for caption, label in (
+            (self.lead_caption, self.lead_card),
+            (self.trump_caption, self.trump_card_label),
+            (self.reply_caption, self.reply_card),
+        ):
+            caption.setAlignment(Qt.AlignCenter)
+            caption.setStyleSheet("font-weight: bold; font-size: 13px; color: #f7e7bd;")
             label.setAlignment(Qt.AlignCenter)
             label.setFixedSize(180, 270)
             label.setStyleSheet("border: 2px solid #a58850; background: #174f2a; color: white")
-            table.addWidget(label)
+            column = QVBoxLayout()
+            column.addWidget(caption)
+            column.addWidget(label)
+            table.addLayout(column)
         self.trump_card_label.setStyleSheet(
             "border: 3px solid #e2b84c; background: #174f2a; color: #f7e7bd; font-weight: bold"
         )
         layout.addLayout(table)
+        self.player_title = QLabel("You:")
+        self.player_title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        layout.addWidget(self.player_title)
         self.hand_row = QHBoxLayout()
         layout.addLayout(self.hand_row)
         self.setCentralWidget(root)
@@ -223,7 +250,8 @@ class BriscasWindow(QMainWindow):
     def render(self) -> None:
         self.info.setText(
             f"Trump: {self.trump.title()}   You: {self.player_score}   "
-            f"CPU: {self.cpu_score}   Cards left: {len(self.deck)}"
+            f"CPU: {self.cpu_score}   Cards left: {len(self.deck)}   "
+            f"Difficulty: {self.difficulty.title()}"
         )
         for index, label in enumerate(self.cpu_card_labels):
             label.setVisible(index < len(self.cpu_hand))
@@ -258,12 +286,19 @@ class BriscasWindow(QMainWindow):
     def render_table(self) -> None:
         """Render table cards from state so a hand refresh cannot erase them."""
         visible = self.table or self.last_trick
-        for index, label in enumerate((self.lead_card, self.reply_card)):
+        roles = ("Lead", "Reply")
+        labels = (self.lead_card, self.reply_card)
+        captions = (self.lead_caption, self.reply_caption)
+        for index, (label, caption, role) in enumerate(zip(labels, captions, roles)):
             label.setPixmap(QPixmap())
             if index < len(visible):
-                self.show_table_card(label, visible[index][1])
+                owner, card = visible[index]
+                self.show_table_card(label, card)
+                owner_text = "Your" if owner == "player" else "Computer's"
+                caption.setText(f"{owner_text} {role}")
             else:
-                label.setText("Lead" if index == 0 else "Reply")
+                label.setText(role)
+                caption.setText(role)
 
     def show_table_card(self, label: QLabel, card: Card) -> None:
         label.setText("")
@@ -310,6 +345,10 @@ class BriscasWindow(QMainWindow):
             self.cpu_score += points
         self.leader = winner
         self.sounds.play("trick")
+        if winner == "player":
+            self.statusBar().showMessage(f"You win the trick! +{points} points", 3000)
+        else:
+            self.statusBar().showMessage(f"Computer wins the trick. +{points} points for the computer.", 3000)
         if self.deck:
             first = self.deck.pop()
             second = self.deck.pop() if self.deck else None
@@ -358,10 +397,17 @@ class BriscasWindow(QMainWindow):
         self.render()
         QMessageBox.information(self, "Game Over", f"{result}\nFinal score: {self.player_score}–{self.cpu_score}")
 
+    def set_difficulty(self, level: str) -> None:
+        self.difficulty = level
+        action = self.difficulty_actions.get(level)
+        if action is not None and not action.isChecked():
+            action.setChecked(True)
+        self.render()
+
     def show_settings(self) -> None:
         dialog = SettingsDialog(self)
         if dialog.exec_() == QDialog.Accepted:
-            self.difficulty = dialog.difficulty.currentText()
+            self.set_difficulty(dialog.difficulty.currentText())
             self.sounds.enabled = dialog.sound.isChecked()
             self.sounds.set_volume(dialog.volume.value())
 
