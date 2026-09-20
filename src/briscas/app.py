@@ -16,7 +16,7 @@ except ImportError:
 from PyQt5.QtWidgets import (
     QAction, QActionGroup, QApplication, QCheckBox, QComboBox, QDialog,
     QFormLayout, QHBoxLayout, QLabel, QMainWindow, QMessageBox, QPushButton,
-    QSlider, QStatusBar, QVBoxLayout, QWidget,
+    QSlider, QStatusBar, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from . import __version__
@@ -122,6 +122,51 @@ class PlayerCountDialog(QDialog):
         return self.OPTIONS[self.count.currentIndex()][0]
 
 
+class AboutDialog(QDialog):
+    """About Briscas, with a separate Support tab for players who don't read the README."""
+
+    def __init__(self, parent: "BriscasWindow") -> None:
+        super().__init__(parent)
+        self.setWindowTitle("About Briscas")
+        self.setMinimumWidth(380)
+        layout = QVBoxLayout(self)
+        tabs = QTabWidget()
+
+        about_tab = QWidget()
+        about_layout = QHBoxLayout(about_tab)
+        icon_label = QLabel()
+        icon_label.setPixmap(
+            QPixmap(str(app_icon_path())).scaled(128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        )
+        about_layout.addWidget(icon_label)
+        about_text = QLabel(
+            f"<h2>Briscas {__version__}</h2><p>A classic Spanish-card game against the computer.</p>"
+            "<p>The traditional Briscas game rules are public domain.<br>"
+            "This software is distributed under the MIT License.</p>"
+        )
+        about_text.setWordWrap(True)
+        about_text.setStyleSheet("color: #0b2545;")
+        about_layout.addWidget(about_text)
+        tabs.addTab(about_tab, "About")
+
+        support_tab = QWidget()
+        support_layout = QVBoxLayout(support_tab)
+        support_text = QLabel(
+            "If you enjoy Briscas and would like to support its development, "
+            "donations are welcome via Zelle to eoftoro@gmail.com."
+        )
+        support_text.setWordWrap(True)
+        support_text.setStyleSheet("color: #0b2545;")
+        support_layout.addWidget(support_text)
+        support_layout.addStretch()
+        tabs.addTab(support_tab, "Support")
+
+        layout.addWidget(tabs)
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.accept)
+        layout.addWidget(close_button)
+
+
 class BriscasWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -132,7 +177,7 @@ class BriscasWindow(QMainWindow):
         self.sounds = SoundBank()
         self.stats = self.load_stats()
         self.awaiting_seat = 0
-        self.new_game()
+        self._deal_new_game()  # start playing immediately; no dialog on launch
 
     def seat_label(self, seat: int) -> str:
         if seat == 0:
@@ -294,11 +339,12 @@ class BriscasWindow(QMainWindow):
 
     def new_game(self) -> None:
         dialog = PlayerCountDialog(self, self.num_players)
-        if dialog.exec_() == QDialog.Accepted:
-            self.num_players = dialog.selected_count
-        elif hasattr(self, "hands"):
-            return  # cancelled restarting an existing game; leave it untouched
+        if dialog.exec_() != QDialog.Accepted:
+            return  # cancelled; leave the current game untouched
+        self.num_players = dialog.selected_count
+        self._deal_new_game()
 
+    def _deal_new_game(self) -> None:
         self.build_ui()
         self.deck = make_deck()
         self.hands: list[list[Card]] = [
@@ -492,19 +538,7 @@ class BriscasWindow(QMainWindow):
         QMessageBox.information(self, "Statistics", "\n".join(f"{k.title()}: {v}" for k, v in self.stats.items()))
 
     def show_about(self) -> None:
-        box = QMessageBox(self)
-        box.setWindowTitle("About Briscas")
-        box.setTextFormat(Qt.RichText)
-        box.setText(
-            f"<h2>Briscas {__version__}</h2><p>A classic Spanish-card game against the computer.</p>"
-            "<p>The traditional Briscas game rules are public domain.<br>"
-            "This software is distributed under the MIT License.</p>"
-        )
-        icon_pixmap = QPixmap(str(app_icon_path())).scaled(
-            128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation
-        )
-        box.setIconPixmap(icon_pixmap)
-        box.exec_()
+        AboutDialog(self).exec_()
 
 
 def main() -> int:

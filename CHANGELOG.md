@@ -1,5 +1,48 @@
 # Changelog
 
+## 2.2.5 — 2026-09-20
+
+- Fixed unreadable white-on-white text in the About dialog's tabs. The
+  app's dark-theme stylesheet only reaches the dialog's own direct
+  children, not the QTabWidget's separately-rendered tab pages, so those
+  pages kept Qt's default light background while the inherited white
+  text became nearly invisible against it. Both tabs now set their text
+  to dark blue explicitly.
+
+## 2.2.4 — 2026-09-20
+
+- The About dialog is now tabbed: "About" (unchanged) plus a new "Support"
+  tab with the Zelle donation note, so players who don't read the README
+  (i.e. most people installing the .deb) still see it in-app.
+
+## 2.2.3 — 2026-09-20
+
+- The game now starts immediately on launch (a 2-player game, dealt and
+  ready to play) instead of first blocking on the "how many players?"
+  dialog. That dialog now only appears when explicitly starting a new
+  game (Game > New Game / Ctrl+N); difficulty and player count both
+  remain changeable at any time from the Game menu without interrupting
+  play.
+
+## 2.2.2 — 2026-09-20
+
+- Fixed the application icon not being reliably recognized by the desktop's
+  menu/dock/app-grid (e.g. Pop!_OS's COSMIC/GNOME-based shell). The icon was
+  only installed under `hicolor/1024x1024/apps`, a size hicolor's own
+  index.theme does not declare (it lists 16 up through 512, plus
+  "scalable"), so the standard icon lookup could never find it. The icon is
+  now installed at every size hicolor actually recognizes (generated from
+  the source image at package-build time), plus a `/usr/share/pixmaps`
+  fallback for older lookup paths.
+- Added `postinst`/`postrm` maintainer scripts that refresh the desktop and
+  icon caches on install/removal, so the Briscas entry and its icon appear
+  in the applications menu immediately rather than waiting on an unrelated
+  trigger or a logout.
+- Verified end-to-end in this environment: installed the rebuilt .deb,
+  confirmed all 13 icon sizes land with correct permissions, and confirmed
+  `com.ericflores.briscas` is indexed in the regenerated
+  `icon-theme.cache` (the file the desktop's icon lookup actually reads).
+
 ## 2.2.1 — 2026-09-20
 
 - After a trick, the result now shows as a clear banner ("You win the

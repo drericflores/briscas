@@ -19,7 +19,7 @@ sh scripts/build-deb.sh
 ## Install
 
 ```sh
-sudo apt install ./dist/briscas_2.2.1_all.deb
+sudo apt install ./dist/briscas_2.2.5_all.deb
 ```
 
 After installation, launch **Briscas** from the application menu or run
