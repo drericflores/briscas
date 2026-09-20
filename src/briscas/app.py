@@ -7,7 +7,12 @@ from pathlib import Path
 
 from PyQt5.QtCore import QTimer, QUrl, Qt
 from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtMultimedia import QSoundEffect
+
+try:
+    from PyQt5.QtMultimedia import QSoundEffect
+except ImportError:
+    QSoundEffect = None
+
 from PyQt5.QtWidgets import (
     QAction, QApplication, QCheckBox, QComboBox, QDialog, QFormLayout,
     QHBoxLayout, QLabel, QMainWindow, QMessageBox, QPushButton, QSlider,
@@ -25,7 +30,7 @@ def data_root() -> Path:
     installed = Path("/usr/share/games/briscas")
     if installed.is_dir():
         return installed
-    return Path(__file__).resolve().parents[3] / "assets"
+    return Path(__file__).resolve().parents[2] / "assets"
 
 
 def state_file() -> Path:
@@ -36,9 +41,11 @@ def state_file() -> Path:
 
 class SoundBank:
     def __init__(self) -> None:
-        self.enabled = True
+        self.enabled = QSoundEffect is not None
         self.volume = 0.7
         self.effects: dict[str, QSoundEffect] = {}
+        if not self.enabled:
+            return
         for name in ("click", "deal", "play", "shuffle", "trick"):
             path = data_root() / "sounds" / f"{name}.wav"
             if path.exists():
