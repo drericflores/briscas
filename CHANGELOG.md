@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.2.2 — 2026-09-20
+
+- Fixed the application icon not being reliably recognized by the desktop's
+  menu/dock/app-grid (e.g. Pop!_OS's COSMIC/GNOME-based shell). The icon was
+  only installed under `hicolor/1024x1024/apps`, a size hicolor's own
+  index.theme does not declare (it lists 16 up through 512, plus
+  "scalable"), so the standard icon lookup could never find it. The icon is
+  now installed at every size hicolor actually recognizes (generated from
+  the source image at package-build time), plus a `/usr/share/pixmaps`
+  fallback for older lookup paths.
+- Added `postinst`/`postrm` maintainer scripts that refresh the desktop and
+  icon caches on install/removal, so the Briscas entry and its icon appear
+  in the applications menu immediately rather than waiting on an unrelated
+  trigger or a logout.
+- Verified end-to-end in this environment: installed the rebuilt .deb,
+  confirmed all 13 icon sizes land with correct permissions, and confirmed
+  `com.ericflores.briscas` is indexed in the regenerated
+  `icon-theme.cache` (the file the desktop's icon lookup actually reads).
+
 ## 2.2.1 — 2026-09-20
 
 - After a trick, the result now shows as a clear banner ("You win the
