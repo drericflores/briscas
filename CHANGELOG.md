@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.4 — 2026-09-20
+
+- The About dialog is now tabbed: "About" (unchanged) plus a new "Support"
+  tab with the Zelle donation note, so players who don't read the README
+  (i.e. most people installing the .deb) still see it in-app.
+
 ## 2.2.3 — 2026-09-20
 
 - The game now starts immediately on launch (a 2-player game, dealt and
