@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.1.7 — 2026-09-20
+
+- Added a visible, checkable Game → Difficulty menu (Easy/Medium/Hard) and
+  showed the active difficulty in the info bar, since the difficulty
+  setting previously existed only inside the Settings dialog with no
+  on-screen indicator of which mode was selected. Renamed the "normal"
+  level to "medium" to match the requested Easy/Medium/Hard naming.
+- Labeled the table's lead and reply card slots with their actual owner
+  ("Your Lead" / "Computer's Lead" / "Your Reply" / "Computer's Reply")
+  instead of the static "Lead"/"Reply" text, and added a "You:" label
+  above the player's hand to mirror the existing "Computer:" label, so
+  it's always clear whose card is whose.
+- Announced the outcome of each trick in the status bar (e.g. "You win
+  the trick! +11 points" / "Computer wins the trick. +2 points for the
+  computer."), since previously the score changed silently with no
+  indication of who won the trick.
+
 ## 2.1.6 — 2026-09-20
 
 - Fixed an incorrect path calculation in `data_root()` that pointed one
