@@ -145,6 +145,7 @@ class AboutDialog(QDialog):
             "This software is distributed under the MIT License.</p>"
         )
         about_text.setWordWrap(True)
+        about_text.setStyleSheet("color: #0b2545;")
         about_layout.addWidget(about_text)
         tabs.addTab(about_tab, "About")
 
@@ -155,6 +156,7 @@ class AboutDialog(QDialog):
             "donations are welcome via Zelle to eoftoro@gmail.com."
         )
         support_text.setWordWrap(True)
+        support_text.setStyleSheet("color: #0b2545;")
         support_layout.addWidget(support_text)
         support_layout.addStretch()
         tabs.addTab(support_tab, "Support")

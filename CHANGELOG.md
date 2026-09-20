@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.5 — 2026-09-20
+
+- Fixed unreadable white-on-white text in the About dialog's tabs. The
+  app's dark-theme stylesheet only reaches the dialog's own direct
+  children, not the QTabWidget's separately-rendered tab pages, so those
+  pages kept Qt's default light background while the inherited white
+  text became nearly invisible against it. Both tabs now set their text
+  to dark blue explicitly.
+
 ## 2.2.4 — 2026-09-20
 
 - The About dialog is now tabbed: "About" (unchanged) plus a new "Support"
