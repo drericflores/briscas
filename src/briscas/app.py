@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from PyQt5.QtCore import QTimer, QUrl, Qt
+from PyQt5.QtCore import QSize, QTimer, QUrl, Qt
 from PyQt5.QtGui import QIcon, QPixmap
 
 try:
@@ -33,11 +33,33 @@ def data_root() -> Path:
     return Path(__file__).resolve().parents[2] / "assets"
 
 
-def app_icon_path() -> Path:
-    installed = Path("/usr/share/icons/hicolor/1024x1024/apps/com.ericflores.briscas.png")
-    if installed.exists():
-        return installed
+# Must match the sizes build-deb.sh actually installs under hicolor/*/apps/.
+_ICON_SIZES = (16, 22, 24, 32, 36, 48, 64, 72, 96, 128, 192, 256, 512)
+
+
+def app_icon_source_path() -> Path:
+    """A single representative icon file, largest installed hicolor size first."""
+    for size in sorted(_ICON_SIZES, reverse=True):
+        candidate = Path(f"/usr/share/icons/hicolor/{size}x{size}/apps/com.ericflores.briscas.png")
+        if candidate.exists():
+            return candidate
     return data_root() / "icons" / "briscas-lily.png"
+
+
+def app_icon() -> QIcon:
+    """A multi-resolution window icon built from every installed hicolor size."""
+    icon = QIcon()
+    added = False
+    for size in _ICON_SIZES:
+        candidate = Path(f"/usr/share/icons/hicolor/{size}x{size}/apps/com.ericflores.briscas.png")
+        if candidate.exists():
+            icon.addFile(str(candidate), QSize(size, size))
+            added = True
+    if not added:
+        fallback = data_root() / "icons" / "briscas-lily.png"
+        if fallback.exists():
+            icon.addFile(str(fallback))
+    return icon
 
 
 def state_file() -> Path:
@@ -136,7 +158,7 @@ class AboutDialog(QDialog):
         about_layout = QHBoxLayout(about_tab)
         icon_label = QLabel()
         icon_label.setPixmap(
-            QPixmap(str(app_icon_path())).scaled(128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            QPixmap(str(app_icon_source_path())).scaled(128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         )
         about_layout.addWidget(icon_label)
         about_text = QLabel(
@@ -171,7 +193,7 @@ class BriscasWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"Briscas {__version__}")
-        self.setWindowIcon(QIcon(str(app_icon_path())))
+        self.setWindowIcon(app_icon())
         self.difficulty = "medium"
         self.num_players = 2
         self.sounds = SoundBank()

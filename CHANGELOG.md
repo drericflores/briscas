@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.2.6 — 2026-09-20
+
+- Fixed the application window icon going blank, a regression from the
+  2.2.2 app-menu icon fix. That fix correctly stopped installing the icon
+  at the non-standard `hicolor/1024x1024/apps` path, but `app_icon_path()`
+  in `app.py` still hardcoded a check for that exact (now nonexistent)
+  file, and its fallback path didn't exist under an installed package
+  either -- so the window icon silently became empty on any properly
+  installed system. Replaced it with `app_icon()` (builds a proper
+  multi-resolution QIcon from whichever hicolor sizes are actually
+  installed) and `app_icon_source_path()` (a single representative file
+  for the About dialog), both matching the sizes build-deb.sh generates.
+  Also added a stable fallback copy of the icon under the game's own
+  data directory (`/usr/share/games/briscas/icons/`) as defense in depth.
+- Verified by installing the rebuilt package and confirming in-process
+  that the window icon is non-null with all 13 sizes available, not just
+  checking that files exist on disk.
+
 ## 2.2.5 — 2026-09-20
 
 - Fixed unreadable white-on-white text in the About dialog's tabs. The
