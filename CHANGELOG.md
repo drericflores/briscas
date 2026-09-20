@@ -1,5 +1,38 @@
 # Changelog
 
+## 2.2.1 — 2026-09-20
+
+- After a trick, the result now shows as a clear banner ("You win the
+  trick! +N points" / "<seat> wins the trick...") in place of the score
+  line for a couple of seconds, then the table clears and the status bar
+  explicitly announces "Your turn — play a card." whenever it becomes the
+  human player's turn to act (leading or replying). Previously the score
+  changed silently and the finished trick lingered with no clear signal
+  of when it was the player's turn again.
+- The About dialog now shows the Briscas app icon at a larger size (128px)
+  instead of the generic small system icon.
+- Fixed the window-icon fallback (used when running from a source checkout
+  instead of the installed .deb) to use the actual Briscas icon instead of
+  a card-back image.
+- Added a donation note (Zelle) to the bottom of README.md.
+
+## 2.2.0 — 2026-09-20
+
+- Added 2/3/4-player games, chosen from a "New Game" dialog before each deal:
+  2 players (you vs. 1 computer, as before), 3 players (you vs. 2 computers,
+  free-for-all scoring), and 4 players (you + a computer partner seated
+  across the table vs. the other two computers, team scoring — matching the
+  traditional partnership variant of Brisca).
+- Generalized the trick engine, AI, and table UI from a fixed lead+reply
+  pair to any number of seats, including handling player counts that don't
+  evenly divide the 40-card deck (a seat can run a trick or two short of
+  cards near the end, same as the real game, instead of crashing).
+- Table slots are now labeled by seat identity (You / Partner / Opponent 1 /
+  Opponent 2 / CPU N) so it stays clear whose card is where regardless of
+  player count.
+- Human-vs-human networked play is a possible future direction, not part of
+  this release.
+
 ## 2.1.7 — 2026-09-20
 
 - Added a visible, checkable Game → Difficulty menu (Easy/Medium/Hard) and
